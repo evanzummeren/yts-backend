@@ -65,3 +65,6 @@ node_modules/
 .env
 
 .DS_Store
+node_modules/
+functions/.env
+functions/credentials.json
