@@ -66,5 +66,6 @@ node_modules/
 
 .DS_Store
 node_modules/
-functions/.env
+functions/proxies.json
 functions/credentials.json
+functions/.env

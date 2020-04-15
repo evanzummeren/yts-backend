@@ -22,7 +22,7 @@ function getVideosWithoutMeta () {
     filter: {
       metadata_checked: { empty: true }
     },
-    limit: 50
+    limit: 40
   })
   .then(data => {
     if(data.data.length === 0) {

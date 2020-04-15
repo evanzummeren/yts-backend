@@ -1,5 +1,8 @@
 require('dotenv').config();
+const proxies = require('./proxies.json');
 const axios = require('axios');
+const http = require('http');
+const https = require('https');
 const pushToDb = require('./push_to_db.js');
 const bot = require('./bot.js')
 const queryString = require('query-string');
@@ -8,72 +11,87 @@ const dayjs = require('dayjs');
 const _ = require('lodash');
 
 const todaysDate = dayjs().format("DD-MM-YYYY");
+const httpsAgent = new https.Agent({ keepAlive: true });
+
+let instance = axios.create({
+  baseURL: "https://www.youtube.com/",
+  httpAgent: new http.Agent({ keepAlive: true }),
+  httpsAgent: new https.Agent({ keepAlive: true }),
+  proxy: {
+    host: _.sample(proxies.hostPool),
+    port: 80,
+    auth: {
+      username: proxies.credentials.user,
+      password: proxies.credentials.password
+    }
+  },
+  timeout: 5000
+})
 
 module.exports = {
+  parseWebApiResponse(jsonString, currentVid) {
+    // This has to become a seperate function
+    if (jsonString.playabilityStatus.status === "ERROR" || jsonString.playabilityStatus.status === "LOGIN_REQUIRED") {
+      let obj = {
+        video_id: currentVid.video_id,
+        online: false,
+        metadata_checked: true,
+        reason: jsonString.playabilityStatus.reason
+      }
+
+      console.log('error, vid not available or set to private.')
+      return obj;
+    } else {
+      let videoDetails = jsonString.videoDetails;
+
+      let obj = {
+        video_id: currentVid.video_id,
+        view_count: parseInt(videoDetails.viewCount),
+        length_seconds: parseInt(videoDetails.lengthSeconds),
+        metadata_checked: true,
+        view_count_history: [ {date: todaysDate, views: parseInt(videoDetails.viewCount) } ],
+        online: true
+      }
+
+      if ("storyboards" in jsonString) {
+        obj.sgp = parseStoryboard('keys', jsonString.storyboards.playerStoryboardSpecRenderer.spec, true, 100).sgp;
+        obj.sigh = parseStoryboard('keys', jsonString.storyboards.playerStoryboardSpecRenderer.spec, true, 100).sigh;
+      }
+
+      return obj;
+    }
+  },
   getAdditionalMetadata: function(arr) {
     const initialArrayLength = arr.length;
     let arrayToPush = [];
 
-    function pullSingleVideo(arr) {
+    function singlePull(arr) {
       let currentVid = arr.pop();
+      let randomTime = _.random(200,700);
 
-      axios.get(`https://www.youtube.com/get_video_info?video_id=${currentVid.video_id}&asv=3&el=detailpage&hl=en_US`)
-      .then(function (response) {
-        
+      instance.get(`get_video_info?video_id=${currentVid.video_id}&asv=3&el=detailpage&hl=en_US`, { httpsAgent })
+      .then( response => {
         let jsonString = JSON.parse(queryString.parse(response.data).player_response);
+        arrayToPush.push(module.exports.parseWebApiResponse(jsonString, currentVid))
 
-        let videoDetails = jsonString.videoDetails;
 
-        if (jsonString.playabilityStatus.status === "ERROR" || jsonString.playabilityStatus.status === "LOGIN_REQUIRED") {
-          let obj = {
-            video_id: currentVid.video_id,
-            online: false,
-            metadata_checked: true,
-            reason: jsonString.playabilityStatus.reason
-          }
-          arrayToPush.push(obj)
-          console.log('error, vid not available or set to private.')
-        } else {
-          console.log('push naar directus')
-          let obj = {
-            video_id: currentVid.video_id,
-            view_count: parseInt(videoDetails.viewCount),
-            length_seconds: parseInt(videoDetails.lengthSeconds),
-            metadata_checked: true,
-            view_count_history: [ {date: todaysDate, views: parseInt(videoDetails.viewCount) } ],
-            online: true
-          }
-  
-          if ("storyboards" in jsonString) {
-            obj.sgp = parseStoryboard('keys', jsonString.storyboards.playerStoryboardSpecRenderer.spec, true, 100).sgp;
-            obj.sigh = parseStoryboard('keys', jsonString.storyboards.playerStoryboardSpecRenderer.spec, true, 100).sigh;
-          }
-  
-          arrayToPush.push(obj)
-        }
-
-        // This requires some refactoring
         if (arr.length === 1) {
-          pushToDb.updateVideos(arrayToPush);
           bot.notify('bot', 'Update additional metadata', `Update YouTube stats for ${initialArrayLength} videos`);          
+          pushToDb.updateVideos(arrayToPush);
         } else if (arr.length) {
-          setTimeout(() => { pullSingleVideo(arr) }, 1000)
+          setTimeout(() => { singlePull(arr) }, randomTime)
         } else {
           pushToDb.updateVideos(arrayToPush);
           console.log('Finished getAdditionalMetadata()')
           return setTimeout(() => { process.exit(0) }, 1000); 
         }
 
-        return 0;
+        return true
       })
-      .catch(function (error) {
-        // handle error
-        console.log(error);
-      })
+      .catch( error => { console.log(error) })
     }
 
-    pullSingleVideo(Array.from(arr))
-
+    singlePull(Array.from(arr))
   },
   checkVideoStatus(id) {
     pushToDb.updateVideo(id, {
