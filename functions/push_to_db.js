@@ -1,5 +1,6 @@
 require('dotenv').config();
 const SDK = require('@directus/sdk-js').default;
+const bot = require('./bot.js');
 
 const client = new SDK({
   url: process.env.DIRECTUS_URL,
@@ -18,7 +19,10 @@ module.exports = {
   },
   addVideos: function(arr) {
     client.createItems("video", arr)
-    .catch(error => console.log(error));
+    .catch(error => {
+      console.log('error in addVideo, might be duplicate key, see logs for full details')
+      // bot.notify('bot', "Can't add video", `Error: ${error.info.error.response.data.error.message}`);          
+    });
   },
   updateVideos: function(arr) {
     client.updateItems("video", arr)
