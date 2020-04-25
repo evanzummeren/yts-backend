@@ -1,7 +1,11 @@
 require('dotenv').config();
 const axios = require('axios');
 const pushToDb = require('./push_to_db.js');
-const bot = require('./bot.js')
+const bot = require('./bot.js');
+
+const proxies = require('./proxies.json');
+const _ = require('lodash');
+const ytKey = _.sample(proxies.YtApiKey);
 
 module.exports = {
   formatVideoMetadata: function(results) {
@@ -34,7 +38,7 @@ module.exports = {
       let pageToken;
       if (nextPageToken) { pageToken = "&pageToken=" + nextPageToken } else { pageToken = ""}
 
-      axios.get(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&maxResults=50&playlistId=${playlistId}&key=${process.env.YT_API}${pageToken}`)
+      axios.get(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&maxResults=50&playlistId=${playlistId}&key=${ytKey}${pageToken}`)
       .then(response => {
         let results = response.data.items;
         let nextPageToken = response.data.nextPageToken;
@@ -75,8 +79,8 @@ module.exports = {
         playlistId = currentChannel.upload_playlist_id;
       }
 
-      let directusApi = `https://zummie.com/yt888/items/video?filter[channel_id]=${channelId}&sort=-video_added_on&limit=20&access_token=${process.env.DIRECTUS_TOKEN}`;
-      let youtubeApi = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&maxResults=10&playlistId=${playlistId}&key=${process.env.YT_API}`
+      let directusApi = `https://zummie.com/yt888/items/video?filter[channel_id]=${channelId}&sort=-video_added_on&limit=40&access_token=${process.env.DIRECTUS_TOKEN}`;
+      let youtubeApi = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&maxResults=3&playlistId=${playlistId}&key=${ytKey}`
 
       const requestDirectus = axios.get(directusApi);
       const requestYoutube = axios.get(youtubeApi);
@@ -124,11 +128,21 @@ module.exports = {
           return true
         }
       ))
-      .catch(errors => { return console.log(errors)})
+      .catch(errors => { 
+        if (errors.response.data.error.errors[0]["reason"] !== undefined) {
+          let reason = errors.response.data.error.errors[0].reason;
+          if (reason === "playlistNotFound") {
+            pushToDb.updateChannel(channelId, { channel_active: false});
+            // set this chhannel on inactive
+            bot.notify('bot', "Can't find playlist", `Couldn't find playlist for ${channelId}. Channel probably deleted.`);
+          } else if (reason === "dailyLimitExceeded") {
+            bot.notify('bot', "API Quota exceeded :(((", `Error: ${errors.response.data.error.errors[0].reason}`);
+          }
+        }
+        console.log(errors.response.data.error.errors);
+      })
     }
 
     getNewOnSinglePlaylist(Array.from(arr))
   }
 }
-
-

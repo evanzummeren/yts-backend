@@ -69,3 +69,5 @@ node_modules/
 functions/proxies.json
 functions/credentials.json
 functions/.env
+
+crawlera-ca.crt

@@ -14,17 +14,21 @@
   },
   "dependencies": {
     "@directus/sdk-js": "^6.0.8",
+    "agentkeepalive": "^4.1.0",
     "axios": "^0.19.2",
     "dayjs": "^1.8.23",
     "dotenv": "^8.2.0",
     "firebase-admin": "^8.10.0",
     "firebase-functions": "^3.6.0",
+    "he": "^1.2.0",
     "http": "0.0.1-security",
     "https": "^1.0.0",
+    "https-proxy-agent": "^5.0.0",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "persistent-tunnel": "^2.2.0",
     "query-string": "^6.11.1",
+    "striptags": "^3.1.1",
     "yt-storyboard": "^1.2.0"
   },
   "devDependencies": {

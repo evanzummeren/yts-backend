@@ -50,9 +50,14 @@ function getLastChannelEntry () {
 function getChannelsForNewVideos () {
   client.getItems("channel", {
     fields: ["id", "upload_playlist_id"],
+    filter: {
+      channel_active: { nempty: true }
+    },
     limit: -1
   })
-  .then(data => { return ytGetVideos.getNewVideosOnPlaylist(data.data) })
+  .then(data => { 
+    return ytGetVideos.getNewVideosOnPlaylist(data.data) 
+  })
   .catch(error => { return error });
 }
 
@@ -106,6 +111,6 @@ exports.channelapi = functions.https.onRequest(app);
 exports.updateChannelStats = functions.pubsub.topic('send-update').onPublish((message) => { getChannelsForStats(); }); 
 exports.getNewVideos = functions.pubsub.topic('check-new-video').onPublish((message) => { getChannelsForNewVideos(); });
 exports.updateAdditionalMeta = functions.pubsub.topic('check-additional-meta').onPublish((message) => { getVideosWithoutMeta(); });
-exports.videosLast14Days = functions.pubsub.topic('check-additional-meta').onPublish((message) => { getVideosLast14Days(); });
+exports.videosLast14Days = functions.pubsub.topic('trigger-views').onPublish((message) => { getVideosLast14Days(); });
 
 exports.updateInternalStats = functions.pubsub.topic('update-internal-stats').onPublish((message) => { bot.calculateStats(); });
