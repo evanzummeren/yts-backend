@@ -15,7 +15,7 @@
   "dependencies": {
     "@directus/sdk-js": "^6.0.8",
     "agentkeepalive": "^4.1.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "dayjs": "^1.8.23",
     "dotenv": "^8.2.0",
     "firebase-admin": "^8.10.0",
