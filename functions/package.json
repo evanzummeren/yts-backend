@@ -28,7 +28,7 @@
     "moment": "^2.24.0",
     "persistent-tunnel": "^2.2.0",
     "query-string": "^6.11.1",
-    "striptags": "^3.1.1",
+    "striptags": "^3.2.0",
     "yt-storyboard": "^1.2.0"
   },
   "devDependencies": {
