@@ -25,7 +25,7 @@
     "https": "^1.0.0",
     "https-proxy-agent": "^5.0.0",
     "lodash": "^4.17.15",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "persistent-tunnel": "^2.2.0",
     "query-string": "^6.11.1",
     "striptags": "^3.1.1",
